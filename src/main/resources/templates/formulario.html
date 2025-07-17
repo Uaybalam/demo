@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Formulario Dirección</title>
+    <script>
+        async function cargarMunicipios() {
+            const estadoClave = document.getElementById("estado").value;
+            const res = await fetch('/municipios?estadoId=' + estadoClave);
+            const municipios = await res.json();
+            document.getElementById("municipio").innerHTML =
+                municipios.map(m => `<option value="${m.clave}">${m.descripcion}</option>`).join('');
+        }
+
+        async function cargarLocalidades() {
+            const estadoClave = document.getElementById("estado").value;
+            const res = await fetch('/localidades?estadoId=' + estadoClave);
+            const localidades = await res.json();
+            document.getElementById("localidad").innerHTML =
+                localidades.map(l => `<option value="${l.clave}">${l.descripcion}</option>`).join('');
+        }
+
+        async function buscarPorCP() {
+            const cp = document.getElementById("codigoPostal").value;
+            if (cp.length === 0) return;
+            const res = await fetch('/buscar-cp?cp=' + cp);
+            if (res.status !== 200) {
+                alert("Código postal no encontrado");
+                return;
+            }
+
+            const data = await res.json();
+            document.getElementById("estado").value = data.estadoId;
+            await cargarMunicipios();
+            await cargarLocalidades();
+            document.getElementById("municipio").value = data.municipioId;
+            document.getElementById("localidad").value = data.localidadId;
+
+            document.getElementById("colonia").innerHTML =
+                data.colonias.map(c => `<option value="${c.clave}">${c.descripcion}</option>`).join('');
+        }
+
+        async function validarDireccion(event) {
+            event.preventDefault();
+            const params = new URLSearchParams({
+                codigoPostal: document.getElementById("codigoPostal").value,
+                estadoId: document.getElementById("estado").value,
+                municipioId: document.getElementById("municipio").value,
+                localidadId: document.getElementById("localidad").value,
+                colonia: document.getElementById("colonia").value,
+                calle: document.getElementById("calle").value,
+                numero: document.getElementById("numero").value
+            });
+
+            const res = await fetch('/validar-direccion', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params
+            });
+
+            const msg = await res.text();
+            alert(msg);
+        }
+    </script>
+    <style>
+        body {
+          font-family: 'Segoe UI', sans-serif;
+          background-color: #f8f9fa;
+          padding: 2rem;
+        }
+
+        .form-container {
+          max-width: 600px;
+          margin: 0 auto;
+          background: white;
+          padding: 2rem;
+          border-radius: 10px;
+          box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .form-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 1rem;
+          margin-bottom: 1.2rem;
+        }
+
+        .form-group {
+          flex: 1 1 100%;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .form-group.half {
+          flex: 1 1 calc(50% - 0.5rem);
+        }
+
+        label {
+          font-weight: bold;
+          margin-bottom: 0.3rem;
+        }
+
+        input[type="text"], select {
+          padding: 0.5rem;
+          border-radius: 5px;
+          border: 1px solid #ccc;
+          font-size: 1rem;
+          background-color: #fff;
+        }
+
+        button {
+          width: 100%;
+          padding: 0.7rem;
+          font-size: 1.1rem;
+          background-color: #007bff;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: background-color 0.3s;
+        }
+
+        button:hover {
+          background-color: #0056b3;
+        }
+
+        .error-message {
+          color: #dc3545;
+          font-size: 0.9rem;
+          margin-top: -0.5rem;
+        }
+    </style>
+</head>
+<body>
+<h2>Formulario de Dirección</h2>
+<form onsubmit="validarDireccion(event)">
+    <label for="codigoPostal">Código Postal:</label><br>
+    <input id="codigoPostal" name="codigoPostal" onblur="buscarPorCP()" required maxlength="5"><br><br>
+
+    <label for="estado">Estado:</label><br>
+    <select id="estado" name="estado" onchange="cargarMunicipios(); cargarLocalidades()" required>
+        <option value="">Selecciona un estado</option>
+        <option th:each="estado : ${estados}"
+                th:value="${estado.clave}"
+                th:text="${estado.nombreEstado}">
+        </option>
+    </select><br><br>
+
+    <label for="municipio">Municipio:</label><br>
+    <select id="municipio" name="municipio" required>
+        <option value="">Selecciona un municipio</option>
+    </select><br><br>
+
+    <label for="localidad">Localidad:</label><br>
+    <select id="localidad" name="localidad" required>
+        <option value="">Selecciona una localidad</option>
+    </select><br><br>
+
+    <label for="colonia">Colonia:</label><br>
+    <select id="colonia" name="colonia" required>
+        <option value="">Selecciona una colonia</option>
+    </select><br><br>
+
+    <label for="calle">Calle:</label><br>
+    <input id="calle" name="calle" type="text" required><br><br>
+
+    <label for="numero">Número:</label><br>
+    <input id="numero" name="numero" type="text" required><br><br>
+
+    <button type="submit">Continuar</button>
+</form>
+</body>
+</html>
